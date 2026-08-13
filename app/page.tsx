@@ -45,7 +45,7 @@ export default function Home() {
     const data = new FormData();
     data.append("image", file);
     try {
-      const response = await fetch("/analyze-image", { method: "POST", body: data });
+      const response = await fetch("/api/analyze", { method: "POST", body: data });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "분석에 실패했어요.");
       setResult(payload);
