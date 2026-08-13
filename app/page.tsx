@@ -18,12 +18,24 @@ export default function Home() {
   const [state, setState] = useState<"idle" | "loading" | "error">("idle");
   const [message, setMessage] = useState("");
 
+  function openFilePicker() {
+    if (!inputRef.current) return;
+    // Resetting the native input lets a user select the same photo again.
+    inputRef.current.value = "";
+    inputRef.current.click();
+  }
+
   function selectImage(event: ChangeEvent<HTMLInputElement>) {
     const selected = event.target.files?.[0];
     if (!selected) return;
     if (!selected.type.startsWith("image/")) {
       setState("error");
       setMessage("사진 파일만 올릴 수 있어요.");
+      return;
+    }
+    if (!["image/jpeg", "image/png", "image/webp"].includes(selected.type)) {
+      setState("error");
+      setMessage("JPG, PNG 또는 WEBP 사진을 올려주세요. iPhone HEIC 사진은 JPG로 변환한 뒤 올려주세요.");
       return;
     }
     if (selected.size > 5 * 1024 * 1024) {
@@ -67,7 +79,7 @@ export default function Home() {
 
       <section className="analyzer" aria-label="해양생물 사진 판독">
         {!image ? (
-          <button className="dropzone" type="button" onClick={() => inputRef.current?.click()}>
+          <button className="dropzone" type="button" onClick={openFilePicker}>
             <span className="camera">⌾</span>
             <strong>사진 촬영 또는 업로드</strong>
             <small>생물의 특징이 잘 보이도록 가까이 찍어주세요</small>
@@ -75,10 +87,10 @@ export default function Home() {
         ) : (
           <div className="preview-wrap">
             <img src={image} alt="판독할 해양생물 사진 미리보기" className="preview" />
-            <button className="replace" type="button" onClick={() => inputRef.current?.click()}>사진 바꾸기</button>
+            <button className="replace" type="button" onClick={openFilePicker}>사진 바꾸기</button>
           </div>
         )}
-        <input ref={inputRef} className="sr-only" type="file" accept="image/png,image/jpeg,image/webp,image/heic" capture="environment" onChange={selectImage} />
+        <input ref={inputRef} className="sr-only" type="file" accept="image/png,image/jpeg,image/webp" capture="environment" onChange={selectImage} />
 
         {image && !result && (
           <button className="analyse-button" type="button" onClick={analyse} disabled={state === "loading"}>
