@@ -21,7 +21,20 @@ export async function POST(request: Request) {
     headers: { "Content-Type": "application/json", "x-goog-api-key": key },
     body: JSON.stringify({ contents: [{ parts: [{ text: PROMPT }, { inline_data: { mime_type: image.type, data } }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.2 } }),
   });
-  if (!response.ok) return NextResponse.json({ error: response.status === 429 ? "무료 분석 한도가 소진되었어요. 잠시 후 다시 시도해 주세요." : "AI 분석을 완료하지 못했어요." }, { status: response.status });
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => null) as { error?: { message?: string } } | null;
+    const detail = errorBody?.error?.message?.replace(/https?:\/\/\S+/g, "").trim();
+    const error = response.status === 429
+      ? "무료 분석 한도가 소진되었어요. 잠시 후 다시 시도해 주세요."
+      : response.status === 401
+        ? "Gemini API 키가 올바르지 않거나 삭제되었어요. Vercel의 키 값을 다시 확인해 주세요."
+        : response.status === 403
+          ? "Gemini API 사용 권한이 아직 활성화되지 않았어요. AI Studio에서 만든 키와 프로젝트를 확인해 주세요."
+          : response.status === 400 && detail?.includes("free tier is not available")
+            ? "현재 위치에서는 Gemini 무료 할당량을 사용할 수 없어요."
+            : `AI 분석 요청이 거절되었어요${detail ? `: ${detail}` : ""}`;
+    return NextResponse.json({ error }, { status: response.status });
+  }
   const body = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
   const text = body.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) return NextResponse.json({ error: "판독 결과를 읽지 못했어요." }, { status: 502 });
