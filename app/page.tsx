@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, useRef, useState } from "react";
+import { ChangeEvent, RefObject, useRef, useState } from "react";
 
 type Analysis = {
   species_name: string;
@@ -11,18 +11,21 @@ type Analysis = {
 };
 
 export default function Home() {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const uploadRef = useRef<HTMLInputElement>(null);
   const [image, setImage] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<Analysis | null>(null);
   const [state, setState] = useState<"idle" | "loading" | "error">("idle");
   const [message, setMessage] = useState("");
+  const [pickerOpen, setPickerOpen] = useState(false);
 
-  function openFilePicker() {
-    if (!inputRef.current) return;
+  function openFilePicker(ref: RefObject<HTMLInputElement | null>) {
+    if (!ref.current) return;
     // Resetting the native input lets a user select the same photo again.
-    inputRef.current.value = "";
-    inputRef.current.click();
+    ref.current.value = "";
+    ref.current.click();
+    setPickerOpen(false);
   }
 
   function selectImage(event: ChangeEvent<HTMLInputElement>) {
@@ -79,7 +82,7 @@ export default function Home() {
 
       <section className="analyzer" aria-label="해양생물 사진 판독">
         {!image ? (
-          <button className="dropzone" type="button" onClick={openFilePicker}>
+          <button className="dropzone" type="button" onClick={() => setPickerOpen(true)}>
             <span className="camera">⌾</span>
             <strong>사진 촬영 또는 업로드</strong>
             <small>생물의 특징이 잘 보이도록 가까이 찍어주세요</small>
@@ -87,10 +90,23 @@ export default function Home() {
         ) : (
           <div className="preview-wrap">
             <img src={image} alt="판독할 해양생물 사진 미리보기" className="preview" />
-            <button className="replace" type="button" onClick={openFilePicker}>사진 바꾸기</button>
+            <button className="replace" type="button" onClick={() => setPickerOpen(true)}>사진 바꾸기</button>
           </div>
         )}
-        <input ref={inputRef} className="sr-only" type="file" accept="image/png,image/jpeg,image/webp" capture="environment" onChange={selectImage} />
+        <input ref={cameraRef} className="sr-only" type="file" accept="image/png,image/jpeg,image/webp" capture="environment" onChange={selectImage} />
+        <input ref={uploadRef} className="sr-only" type="file" accept="image/png,image/jpeg,image/webp" onChange={selectImage} />
+
+        {pickerOpen && (
+          <div className="photo-dialog-backdrop" role="presentation" onClick={() => setPickerOpen(false)}>
+            <section className="photo-dialog" role="dialog" aria-modal="true" aria-labelledby="photo-dialog-title" onClick={(event) => event.stopPropagation()}>
+              <h2 id="photo-dialog-title">사진 추가하기</h2>
+              <p>사진을 촬영하거나 앨범에서 선택해 주세요.</p>
+              <button type="button" onClick={() => openFilePicker(cameraRef)}>카메라로 촬영</button>
+              <button type="button" onClick={() => openFilePicker(uploadRef)}>앨범에서 업로드</button>
+              <button type="button" className="dialog-cancel" onClick={() => setPickerOpen(false)}>취소</button>
+            </section>
+          </div>
+        )}
 
         {image && !result && (
           <button className="analyse-button" type="button" onClick={analyse} disabled={state === "loading"}>
